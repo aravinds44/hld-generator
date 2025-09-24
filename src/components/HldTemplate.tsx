@@ -47,7 +47,7 @@ const HldTemplate: React.FC<HldTemplateProps> = ({ data }) => {
         </p>
         <div className="flex justify-center p-4 border rounded-lg bg-card">
           <Image
-            src="https://picsum.photos/seed/arch/800/450"
+            src="/architecture.png"
             alt="High-Level Architecture Diagram"
             width={800}
             height={450}

@@ -58,7 +58,7 @@ const createSummaryRow = (label: string, value: string) => {
 };
 
 export const generateHldDocument = async (data: HldData) => {
-  const archImageUrl = 'https://picsum.photos/seed/arch/800/450';
+  const archImageUrl = '/architecture.png';
   const archImageBase64 = (await fetchImageAsBase64(archImageUrl)) as string;
 
   const summaryRows = [
