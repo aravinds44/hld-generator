@@ -1,22 +1,88 @@
 'use client';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from 'docx';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  ImageRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
+} from 'docx';
 import { saveAs } from 'file-saver';
 import type { HldData } from './types';
 
 const fetchImageAsBase64 = async (url: string) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+const createSummaryRow = (label: string, value: string) => {
+  return new TableRow({
+    children: [
+      new TableCell({
+        children: [
+          new Paragraph({
+            children: [new TextRun({ text: label, bold: true })],
+          }),
+        ],
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+        },
+        margins: { top: 100, bottom: 100, left: 100, right: 100 },
+      }),
+      new TableCell({
+        children: [new Paragraph(value)],
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'D3D3D3' },
+        },
+        margins: { top: 100, bottom: 100, left: 100, right: 100 },
+      }),
+    ],
+  });
 };
 
 export const generateHldDocument = async (data: HldData) => {
   const archImageUrl = 'https://picsum.photos/seed/arch/800/450';
   const archImageBase64 = (await fetchImageAsBase64(archImageUrl)) as string;
+
+  const summaryRows = [
+    createSummaryRow('Customer:', data.customerName),
+    createSummaryRow('vDSR Version:', data.vdsrVersion),
+    createSummaryRow('Platform:', data.platform),
+    ...(data.platform === 'Openstack' ? [createSummaryRow('Openstack Version:', data.openstackVersion || 'N/A')] : []),
+    createSummaryRow('Number of Sites:', String(data.numberOfSites)),
+    createSummaryRow('Number of NOAMs:', String(data.numberOfNoams)),
+    createSummaryRow('IDIH Required:', data.isIdihRequired ? 'Yes' : 'No'),
+    createSummaryRow('UDR Required:', data.isUdrRequired ? 'Yes' : 'No'),
+    createSummaryRow('Spare SOAM:', data.isSpareSoamRequired ? 'Yes' : 'No'),
+    createSummaryRow('SBR Required:', data.isSbrRequired ? 'Yes' : 'No'),
+  ];
+  
+  const summaryTable = new Table({
+    columnWidths: [4500, 4500],
+    rows: summaryRows,
+    width: {
+        size: 9000,
+        type: WidthType.DXA,
+    },
+  });
+
 
   const doc = new Document({
     styles: {
@@ -66,20 +132,10 @@ export const generateHldDocument = async (data: HldData) => {
             text: '2. Deployment Summary',
             heading: HeadingLevel.HEADING_1,
           }),
-          new Paragraph(`Customer: ${data.customerName}`),
-          new Paragraph(`vDSR Version: ${data.vdsrVersion}`),
-          new Paragraph(`Platform: ${data.platform}`),
-          ...(data.platform === 'Openstack'
-            ? [new Paragraph(`Openstack Version: ${data.openstackVersion}`)]
-            : []),
-          new Paragraph(`Number of Sites: ${data.numberOfSites}`),
-          new Paragraph(`Number of NOAMs: ${data.numberOfNoams}`),
-          new Paragraph(`IDIH Required: ${data.isIdihRequired ? 'Yes' : 'No'}`),
-          new Paragraph(`UDR Required: ${data.isUdrRequired ? 'Yes' : 'No'}`),
-          new Paragraph(`Spare SOAM: ${data.isSpareSoamRequired ? 'Yes' : 'No'}`),
+          summaryTable,
           new Paragraph({
-            text: `SBR Required: ${data.isSbrRequired ? 'Yes' : 'No'}`,
-            spacing: { after: 240 },
+              text: '',
+              spacing: { after: 240 },
           }),
           new Paragraph({
             text: '3. High-Level Architecture',
