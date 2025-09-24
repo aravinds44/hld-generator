@@ -1,0 +1,17 @@
+Requirement Document - vDSR Deployment
+
+Customer: Global Telco
+vDSR Version: 24.2.0
+Platform: Openstack
+Openstack Version: Yoga
+
+Project Overview:
+This document outlines the requirements for deploying Oracle's vDSR for Global Telco.
+
+Deployment Details:
+- The deployment will consist of 2 sites for geo-redundancy.
+- Each site will have one NOAM, for a total of 2 NOAMs.
+- A spare SOAM is not required for this deployment.
+- SBR (Subscriber Binding Repository) is required.
+- IDIH (Integrated Diameter Intelligence Hub) is required.
+- UDR (User Data Repository) is not required.
