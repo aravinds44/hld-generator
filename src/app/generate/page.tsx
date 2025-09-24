@@ -11,15 +11,17 @@ import { useToast } from '@/hooks/use-toast';
 import { hldDataSchema } from '@/lib/schema';
 import type { HldData } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Bot, Check, ChevronRight, FileUp, Loader2, FileCheck, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Bot, Check, ChevronRight, FileUp, Loader2, RefreshCw, Download } from 'lucide-react';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import HldTemplate from '@/components/HldTemplate';
+import { generateHldDocument } from '@/lib/hld-generator';
 
 const steps = [
   { id: '01', name: 'Upload Document', status: 'current' },
   { id: '02', name: 'Verify Details', status: 'upcoming' },
-  { id: '03', name: 'Review HLD', status: 'upcoming' },
+  { id: '03', name: 'Review & Download HLD', status: 'upcoming' },
 ];
 
 type FormData = z.infer<typeof hldDataSchema>;
@@ -110,7 +112,7 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl py-12 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto max-w-7xl py-12 px-4 sm:px-6 lg:px-8">
       <nav aria-label="Progress">
         <ol role="list" className="space-y-4 md:flex md:space-x-8 md:space-y-0">
           {steps.map((step, index) => (
@@ -134,9 +136,9 @@ export default function GeneratePage() {
         </ol>
       </nav>
 
-      <Card className="mt-8 shadow-lg">
+      <div className="mt-8">
         {renderStepContent()}
-      </Card>
+      </div>
     </div>
   );
 }
@@ -170,10 +172,10 @@ const Step1Upload = ({ onFileUpload, isLoading, fileName }: { onFileUpload: (fil
   };
 
   return (
-    <>
+    <Card className="max-w-4xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-headline">Upload Requirement Document</CardTitle>
-        <CardDescription>Upload your requirement document in .doc, .docx, or .pdf format.</CardDescription>
+        <CardDescription>Upload your requirement document in .txt, .doc, .docx, or .pdf format.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -198,22 +200,22 @@ const Step1Upload = ({ onFileUpload, isLoading, fileName }: { onFileUpload: (fil
                   className="relative cursor-pointer rounded-md font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 hover:text-primary/80"
                 >
                   <span>Upload a file</span>
-                  <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".doc,.docx,.pdf" />
+                  <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".txt,.doc,.docx,.pdf" />
                 </label>
                 <p className="pl-1">or drag and drop</p>
               </div>
-              <p className="text-xs leading-5 text-muted-foreground">DOC, DOCX, PDF up to 10MB</p>
+              <p className="text-xs leading-5 text-muted-foreground">TXT, DOC, DOCX, PDF up to 10MB</p>
             </div>
           </div>
         )}
       </CardContent>
-    </>
+    </Card>
   );
 };
 
 const Step2Details = ({ form, onSubmit }: { form: any, onSubmit: (data: FormData) => void }) => {
   return (
-    <>
+    <Card className="max-w-4xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-headline">Verify Extracted Details</CardTitle>
         <CardDescription>Review and complete the information extracted by the AI.</CardDescription>
@@ -290,7 +292,7 @@ const Step2Details = ({ form, onSubmit }: { form: any, onSubmit: (data: FormData
                   <FormItem>
                     <FormLabel>Number of Sites</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 2" {...field} />
+                      <Input type="number" placeholder="e.g., 2" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -303,7 +305,7 @@ const Step2Details = ({ form, onSubmit }: { form: any, onSubmit: (data: FormData
                   <FormItem>
                     <FormLabel>Number of NOAMs</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 2" {...field} />
+                      <Input type="number" placeholder="e.g., 2" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -376,45 +378,53 @@ const Step2Details = ({ form, onSubmit }: { form: any, onSubmit: (data: FormData
           </form>
         </Form>
       </CardContent>
-    </>
+    </Card>
   );
 };
 
 const Step3Review = ({ data, onStartOver }: { data: FormData, onStartOver: () => void }) => {
-  const DetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
-    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
-      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-sm text-foreground sm:col-span-2 sm:mt-0">{value}</dd>
-    </div>
-  );
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      await generateHldDocument(data);
+    } catch (error) {
+      console.error('Failed to generate document:', error);
+      // You might want to show a toast message here
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-headline">Generated HLD Details</CardTitle>
-            <CardDescription>This is a summary of the information for your HLD.</CardDescription>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl font-headline">Review & Download HLD</CardTitle>
+              <CardDescription>This is a preview of the generated High-Level Design document.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onStartOver}><RefreshCw className="mr-2 h-4 w-4"/> Start Over</Button>
+              <Button onClick={handleDownload} disabled={isDownloading}>
+                {isDownloading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4"/>
+                )}
+                Download as .docx
+              </Button>
+            </div>
           </div>
-          <Button variant="outline" onClick={onStartOver}><RefreshCw className="mr-2 h-4 w-4"/> Start Over</Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="border-t border-border">
-          <dl className="divide-y divide-border">
-            <DetailItem label="Customer Name" value={data.customerName} />
-            <DetailItem label="vDSR Version" value={data.vdsrVersion} />
-            <DetailItem label="Platform" value={data.platform} />
-            {data.platform === 'Openstack' && <DetailItem label="Openstack Version" value={data.openstackVersion || 'Not Provided'} />}
-            <DetailItem label="Number of Sites" value={data.numberOfSites} />
-            <DetailItem label="Number of NOAMs" value={data.numberOfNoams} />
-            <DetailItem label="IDIH Required" value={data.isIdihRequired ? 'Yes' : 'No'} />
-            <DetailItem label="UDR Required" value={data.isUdrRequired ? 'Yes' : 'No'} />
-            <DetailItem label="Spare SOAM Required" value={data.isSpareSoamRequired ? 'Yes' : 'No'} />
-            <DetailItem label="SBR Required" value={data.isSbrRequired ? 'Yes' : 'No'} />
-          </dl>
-        </div>
-      </CardContent>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+             <HldTemplate data={data} />
+          </div>
+        </CardContent>
+      </Card>
     </>
   );
 };
